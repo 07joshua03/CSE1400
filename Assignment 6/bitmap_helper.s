@@ -97,3 +97,33 @@ write_data_end:
     movq    %rbp, %rsp
     popq    %rbp
     ret
+
+#   Takes:
+#   %rdi <- base address(lowest) of message
+#   %rsi <- base address(lowest) to write RLE-encoded message to
+encode_RLE:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    movb   (%rdi), %ah
+    movq    $1, %rcx
+    movq    $0, %rdx
+    jmp     encode_RLE_loop
+
+encode_RLE_loop:
+    addq    $1, %rdi
+    movb   (%rdi), %al
+    cmpb    %ah, %al
+    jne     encode_RLE_else
+    cmpb    $8, %al
+    jge     encode_RLE_else
+    incq    %rcx
+    jmp     encode_RLE_loop
+
+encode_RLE_else:
+    movb
+
+encode_RLE_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret

@@ -63,8 +63,21 @@ start:
     popq    %rdx
 
     movq    %rdx, %rdi
-    movq    $0, %rax
-    call    printf
+    call    get_message_length
+    shrq    $2, %rax    #Divide by 4
+    incq    %rax
+    shlq    $3, %rax
+
+    subq    %rax, %rsp
+    movq    %rsp, %rsi
+
+    pushq   %rdi    #Leadtrailmessage address
+    pushq   %rsi    #RLE address
+
+    call    encode_RLE
+
+    popq    %rsi
+    popq    %rdi
 
     movq    %rsi, %rcx
     jmp     end

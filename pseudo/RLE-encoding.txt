@@ -1,0 +1,12 @@
+char currChar = message[0];
+int count = 1;
+for(int i = 1; i < message.length; i++){
+    if(message[i] == currChar) count++;
+    else{
+        writedata(currChar + count);
+        currChar = message[i];
+        if(currChar == 0) break;
+        count = 1;
+        
+    } 
+}
