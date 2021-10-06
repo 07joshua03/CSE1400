@@ -105,25 +105,67 @@ encode_RLE:
     pushq   %rbp
     movq    %rsp, %rbp
 
-    movb   (%rdi), %ah
-    movq    $1, %rcx
-    movq    $0, %rdx
+    movb    (%rdi), %ah  #prevChar
+    movq    $0, %rcx
+    movb    $1, %cl     #char count
     jmp     encode_RLE_loop
 
 encode_RLE_loop:
-    addq    $1, %rdi
-    movb   (%rdi), %al
-    cmpb    %ah, %al
+    incq    %rdi                #Move message address 1 byte
+    movb    (%rdi), %al         #currChar
+    cmpb    %ah, %al            #compare currChar to prevChar
     jne     encode_RLE_else
-    cmpb    $8, %al
-    jge     encode_RLE_else
-    incq    %rcx
+    // cmpb    $255, %cl           #avoid int overflow (doesnt work tho :/)
+    // jge     encode_RLE_else
+    incb    %cl
     jmp     encode_RLE_loop
 
 encode_RLE_else:
-    movb
+    movb    %cl, (%rsi)
+    addq    $1, %rsi
+    movb    %ah, (%rsi)
+    addq    $1, %rsi
+    movb    %al, %ah
+    cmpb    $0, %ah
+    je      encode_RLE_end
+    movb    $1, %cl
+    jmp     encode_RLE_loop
+
 
 encode_RLE_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+
+#   Takes:
+#   %rdi <- base address(lowest) of RLE_encoded message
+#   %rsi <- base address(lowest) to write RLE-decoded message to
+decode_RLE:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    jmp decode_RLE_outer_loop
+
+decode_RLE_outer_loop:
+    movb    (%rdi), %cl
+    incq    %rdi
+    cmpb    $0, %cl
+    je      decode_RLE_end
+    movb    (%rdi), %al
+    incq    %rdi
+
+    jmp     decode_RLE_inner_loop
+
+decode_RLE_inner_loop:
+    cmpb    $0, %cl
+    je      decode_RLE_outer_loop
+    movb    %al, (%rsi)
+    incq    %rsi
+    decb    %cl
+    jmp     decode_RLE_inner_loop
+
+decode_RLE_end:
     movq    %rbp, %rsp
     popq    %rbp
     ret

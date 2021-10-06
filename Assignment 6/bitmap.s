@@ -63,10 +63,15 @@ start:
     popq    %rdx
 
     movq    %rdx, %rdi
+
+    pushq   %rdi
+
     call    get_message_length
     shrq    $2, %rax    #Divide by 4
     incq    %rax
     shlq    $3, %rax
+
+    popq    %rdi
 
     subq    %rax, %rsp
     movq    %rsp, %rsi
@@ -78,6 +83,31 @@ start:
 
     popq    %rsi
     popq    %rdi
+
+    pushq   %rsi
+
+    movq    %rsi, %rdi
+    call    get_message_length
+    shrq    $2, %rax    #Divide by 4
+    incq    %rax
+    shlq    $3, %rax
+
+    popq    %rdi
+
+    subq    %rax, %rsp
+    movq    %rsp, %rsi
+
+    pushq   %rdi
+    pushq   %rsi
+
+    #call    decode_RLE
+
+    popq    %rsi
+    popq    %rdi
+
+    movq    %rsi, %rdi
+    movq    $0, %rax
+    call    printf
 
     movq    %rsi, %rcx
     jmp     end
