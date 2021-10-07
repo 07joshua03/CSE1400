@@ -1,6 +1,6 @@
 .global brainfuck
 
-format_str: .asciz "We should be executing the following code:\n%s"
+format_str: .asciz "We should be executing the following code:\n%s\n\n"
 
 # Your brainfuck subroutine will receive one argument:
 # a zero termianted string containing the code to execute.
@@ -12,6 +12,8 @@ brainfuck:
 	movq $format_str, %rdi
 	call printf
 	movq $0, %rax
+
+	
 
 	movq %rbp, %rsp
 	popq %rbp
