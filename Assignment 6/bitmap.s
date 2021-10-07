@@ -51,16 +51,16 @@ start:
     pushq   %rbp
     movq    %rsp, %rbp
 
-    // #################################
-    // pushq   %rdi
-    // subq    $8, %rsp
-    // movq    $0, %rax
-    // movq    %rdi, %rsi
-    // movq    $test_output_1, %rdi
-    // call    printf
-    // addq    $8, %rsp
-    // popq    %rdi
-    // #################################
+    #################################
+    pushq   %rdi
+    subq    $8, %rsp
+    movq    $0, %rax
+    movq    %rdi, %rsi
+    movq    $test_output_1, %rdi
+    call    printf
+    addq    $8, %rsp
+    popq    %rdi
+    #################################
 
     pushq   %rdi
     call    get_message_length
@@ -98,16 +98,16 @@ start:
 
     movq    %rdx, %rdi
 
-    // #################################
-    // pushq   %rdi
-    // subq    $8, %rsp
-    // movq    $0, %rax
-    // movq    %rdi, %rsi
-    // movq    $test_output_2, %rdi
-    // call    printf
-    // addq    $8, %rsp
-    // popq    %rdi
-    // #################################
+    #################################
+    pushq   %rdi
+    subq    $8, %rsp
+    movq    $0, %rax
+    movq    %rdi, %rsi
+    movq    $test_output_2, %rdi
+    call    printf
+    addq    $8, %rsp
+    popq    %rdi
+    #################################
 
     pushq   %rdi
 
@@ -129,15 +129,15 @@ start:
     popq    %rsi
     popq    %rdi
 
-    // #################################
-    // pushq   %rdi
-    // pushq   %rsi
-    // movq    $0, %rax
-    // movq    $test_output_3, %rdi
-    // call    printf
-    // popq    %rsi
-    // popq    %rdi
-    // #################################
+    #################################
+    pushq   %rdi
+    pushq   %rsi
+    movq    $0, %rax
+    movq    $test_output_3, %rdi
+    call    printf
+    popq    %rsi
+    popq    %rdi
+    #################################
 
     // pushq   %rsi
 
