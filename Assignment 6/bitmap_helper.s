@@ -1,5 +1,7 @@
 .text
 
+signature:  .asciz "BM"
+
 #   Takes:
 #   %rdi <- the base address of message (where we start at the lowest address)
 #   Returns:
@@ -188,6 +190,8 @@ write_barcode:
     popq    %rsi
     popq    %rdi
 
+    pushq   %rax
+
     movb    %al, %cl
     movb    %al, %ch
 
@@ -242,20 +246,124 @@ write_barcode_inner_inner_loop_end:
 
 
 write_barcode_end:
+
+    popq    %rax
+    mulq    %rax 
+    movq    $3, %rdi
+    mulq    %rdi
     movq    %rbp, %rsp
     popq    %rbp
     ret
 
 
+#   Takes:
+#   %rdi <- the RLE-encoded message
+#   %rsi <- the address of barcode data
+#   Returns:
+#   %rax -> the length in bytes of barcode data
 XOR_encrypt:
     pushq   %rbp
     movq    %rsp, %rbp
-    jmp     XOR_encrypt_loop
+
+    pushq   %rdi
+    pushq   %rsi
+    call    get_message_length
+    popq    %rsi
+    popq    %rdi
+
+    shrq    $3, %rax
+    incq    %rax
+    movq    %rax, %rcx
+    jmp     XOR_encrypt_loop     
 
 XOR_encrypt_loop:
-    jmp     XOR_encrypt_end
+    cmpq    $0, %rcx
+    jle     XOR_encrypt_end
+
+    movq    (%rdi), %rax
+    movq    (%rsi), %rdx
+    xorq    %rdx, %rax
+    movq    %rax, (%rsi)
+
+    addq    $8, %rdi
+    addq    $8, %rsi
+
+    decq    %rcx
+    jmp     XOR_encrypt_loop
 
 XOR_encrypt_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#   Takes:
+#   %rdi <- the address of bitmap
+#   %rsi <- the address of barcode
+#   %rdx <- the file size(in bytes)
+#   %rcx <- the width/length of barcode(in bytes)
+#   Returns:
+#   %rax -> the length in bytes of barcode data
+write_bitmap:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    #File Header
+    movq    $signature, %rax
+    movw    (%rax), %ax
+    movw    %ax, (%rdi)     #signature
+    addq    $2, %rdi
+    movl    %ecx, (%rdi)    #file size
+    addq    $4, %rdi
+    movl    $0, (%rdi)      #reserve field
+    addq    $4, %rdi
+    movl    $0, (%rdi)      #offset of pixel data inside image
+    addq    $4, %rdi
+
+    #Bitmap Header
+    movl    $40, (%rdi)     #header size
+    addq    $4, %rdi
+    movl    %ecx, (%rdi)    #image pixel width
+    addq    $4, %rdi
+    movl    %ecx, (%rdi)    #image pixel height
+    addq    $4, %rdi
+    movw    $1, (%rdi)      #reserved field
+    addq    $2, %rdi
+    movw    $24, (%rdi)     #bits per pixel
+    addq    $2, %rdi
+    movl    $0, (%rdi)      #compression method
+    addq    $4, %rdi
+
+    subq    $54, %rdx
+    movl    %edx, (%rdi)    #size of pixel data
+    addq    $4, %rdi
+    movl    $2835, (%rdi)   #hor res ppm
+    addq    $4, %rdi
+    movl    $2835, (%rdi)   #ver res ppm
+    addq    $4, %rdi
+    movl    $0, (%rdi)      #color palette info
+    addq    $4, %rdi
+    movl    $0, (%rdi)      #n of important colors
+    addq    $4, %rdi
+
+    movq    %rdx, %rcx
+
+    jmp     write_bitmap_loop
+
+write_bitmap_loop: 
+    cmpq    $0, %rcx
+    jle     write_bitmap_end
+
+    movb    (%rsi), %al
+    movb    %al, (%rdi)
+
+
+    decq    %rcx
+    incq    %rsi
+    incq    %rdi
+    jmp     write_bitmap_loop
+
+
+write_bitmap_end:
     movq    %rbp, %rsp
     popq    %rbp
     ret

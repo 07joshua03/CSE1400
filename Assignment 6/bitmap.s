@@ -6,26 +6,28 @@ message:    .asciz "The answer for exam question 42 is not F."
 leadtrail:  .asciz "CCCCCCCCSSSSEE1111444400000000"
 barcode:    .asciz "WWWWWWWWBBBBBBBBWWWWBBBBWWBBBWWR"
 
+filepath:   .asciz "/home/student/TUDelft/Assembly/Assignment\ 6/barcode.bmp"
+
 test_output_1:  .asciz "\nThe original message is:\n%s\n"
 test_output_2:  .asciz "\nThe message with lead-trail is:\n%s\n"
 test_output_3:  .asciz "\nThe RLE-encoded message is: (prob doesn't show correctly)\n%s\n"
 test_output_4:  .asciz "\nDecoding RLE-encoded message gives:(to show encoding/decoding works)\n%s\n\n"
 
 barcode_colors:
-    .byte   0x57
+    .byte   0x57    #WHITE
     .byte   0xFF
     .byte   0xFF
     .byte   0xFF
 
-    .byte   0x42
+    .byte   0x42    #BLACK
     .byte   0x00
     .byte   0x00
     .byte   0x00
 
-    .byte   0x52
+    .byte   0x52    #RED
+    .byte   0x00
+    .byte   0x00
     .byte   0xFF
-    .byte   0x00
-    .byte   0x00
 
 .global main
 
@@ -49,16 +51,16 @@ start:
     pushq   %rbp
     movq    %rsp, %rbp
 
-    #################################
-    pushq   %rdi
-    subq    $8, %rsp
-    movq    $0, %rax
-    movq    %rdi, %rsi
-    movq    $test_output_1, %rdi
-    call    printf
-    addq    $8, %rsp
-    popq    %rdi
-    #################################
+    // #################################
+    // pushq   %rdi
+    // subq    $8, %rsp
+    // movq    $0, %rax
+    // movq    %rdi, %rsi
+    // movq    $test_output_1, %rdi
+    // call    printf
+    // addq    $8, %rsp
+    // popq    %rdi
+    // #################################
 
     pushq   %rdi
     call    get_message_length
@@ -96,16 +98,16 @@ start:
 
     movq    %rdx, %rdi
 
-    #################################
-    pushq   %rdi
-    subq    $8, %rsp
-    movq    $0, %rax
-    movq    %rdi, %rsi
-    movq    $test_output_2, %rdi
-    call    printf
-    addq    $8, %rsp
-    popq    %rdi
-    #################################
+    // #################################
+    // pushq   %rdi
+    // subq    $8, %rsp
+    // movq    $0, %rax
+    // movq    %rdi, %rsi
+    // movq    $test_output_2, %rdi
+    // call    printf
+    // addq    $8, %rsp
+    // popq    %rdi
+    // #################################
 
     pushq   %rdi
 
@@ -127,15 +129,15 @@ start:
     popq    %rsi
     popq    %rdi
 
-    #################################
-    pushq   %rdi
-    pushq   %rsi
-    movq    $0, %rax
-    movq    $test_output_3, %rdi
-    call    printf
-    popq    %rsi
-    popq    %rdi
-    #################################
+    // #################################
+    // pushq   %rdi
+    // pushq   %rsi
+    // movq    $0, %rax
+    // movq    $test_output_3, %rdi
+    // call    printf
+    // popq    %rsi
+    // popq    %rdi
+    // #################################
 
     // pushq   %rsi
 
@@ -173,12 +175,15 @@ start:
     pushq   %rsi
 
     call    get_message_length
+    pushq   %rax
     movq    $3, %rcx
     mulq    %rcx    
     shrq    $3, %rax
     incq    %rax
     shlq    $3, %rax
     mulq    %rax
+
+    popq    %rcx
 
     popq    %rsi
     popq    %rdi
@@ -191,14 +196,57 @@ start:
 
     pushq   %rdi
     pushq   %rsi
+    pushq   %rcx
     movq    %rdx, %rdi
     movq    $barcode_colors, %rdx
 
     call    write_barcode
+    popq    %rcx
     popq    %rsi
     popq    %rdi
 
+    movq    %rax, %rdx
+
+    pushq   %rdi
+    pushq   %rsi
+    pushq   %rdx
+    pushq   %rcx
     call    XOR_encrypt
+    popq    %rcx        #barcode width/length
+    popq    %rdx
+    popq    %rsi        #barcode address
+    popq    %rdi
+
+    addq    $54, %rdx   #Total file size
+    subq    %rdx, %rsp
+    movq    %rsp, %rdi  #Address of bitmap  
+
+    pushq   %rdi
+    pushq   %rdx
+    call    write_bitmap
+    popq    %rdx
+    popq    %rdi
+
+    pushq   %rdi
+    pushq   %rdx
+
+    movq    $2, %rax
+    movq    $filepath, %rdi
+    movq    $0102, %rsi
+    movq    $00700, %rdx
+
+    syscall
+
+    popq    %rdx
+    popq    %rsi
+
+    movq    %rax, %rdi
+    movq    $1, %rax
+
+    syscall
+
+    
+    #call    write_to_file
 
     movq    %rbp, %rsp
     popq    %rbp
