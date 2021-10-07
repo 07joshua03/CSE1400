@@ -169,3 +169,93 @@ decode_RLE_end:
     movq    %rbp, %rsp
     popq    %rbp
     ret
+
+#   Takes:
+#   %rdi <- the barcode message
+#   %rsi <- the address for barcode data
+#   %rdx <- the barcode colors
+#   Returns:
+#   %rax -> the length in bytes of barcode data
+write_barcode:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    pushq   %rdi
+    pushq   %rsi
+    pushq   %rdx
+    call    get_message_length
+    popq    %rdx
+    popq    %rsi
+    popq    %rdi
+
+    movb    %al, %cl
+    movb    %al, %ch
+
+    jmp     write_barcode_outer_loop
+write_barcode_outer_loop:
+    cmpb    $0, %cl
+    jle     write_barcode_end
+
+    pushq   %rax
+    pushq   %rdi
+    jmp     write_barcode_inner_loop
+    
+write_barcode_outer_loop_2:
+    popq    %rdi
+    popq    %rax
+    movb    %al, %ch
+
+    decb    %cl
+    jmp     write_barcode_outer_loop
+
+
+write_barcode_inner_loop:
+    cmpb    $0, %ch
+    jle     write_barcode_outer_loop_2
+    movb    (%rdi), %al
+    movb    $0, %ah
+    pushq   %rdx
+    jmp     write_barcode_inner_inner_loop
+
+write_barcode_inner_loop_2:
+    popq    %rdx
+    incq    %rdi
+    decb    %ch
+    jmp     write_barcode_inner_loop 
+
+write_barcode_inner_inner_loop:
+    cmpb    %al, (%rdx)
+    je      write_barcode_inner_inner_loop_end
+    addq    $4, %rdx
+    jmp     write_barcode_inner_inner_loop
+
+write_barcode_inner_inner_loop_end:
+    movb    1(%rdx), %ah
+    movb    %ah, (%rsi)
+    movb    2(%rdx), %ah
+    movb    %ah, 1(%rsi)
+    movb    3(%rdx), %ah
+    movb    %ah, 2(%rsi)
+    addq    $3, %rsi
+
+    jmp write_barcode_inner_loop_2
+
+
+write_barcode_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+
+XOR_encrypt:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    jmp     XOR_encrypt_loop
+
+XOR_encrypt_loop:
+    jmp     XOR_encrypt_end
+
+XOR_encrypt_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
