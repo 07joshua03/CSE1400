@@ -5,14 +5,13 @@ signature:  .asciz "BM"
 #   Takes:
 #   %rdi <- the base address of message (where we start at the lowest address)
 #   Returns:
-#   %rax -> the length(in bytes) of message
+#   %rax -> the length(in bytes) of message till zero-byte
 get_message_length:
     pushq   %rbp
     movq    %rsp, %rbp
 
     movq    $0, %rcx
     jmp     get_message_length_loop
-
 
     get_message_length_loop:
         pushq   %rdi
@@ -22,8 +21,6 @@ get_message_length:
 
         cmpb    $0, %al
         je      get_message_length_end
-
-
 
         popq    %rdi
         incq    %rcx

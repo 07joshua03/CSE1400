@@ -1,7 +1,5 @@
 .global brainfuck
 
-format_str: .asciz "We should be executing the following code:\n%s\n\n"
-
 commands:
 	.word	0x015D	#	]	end of loop
 	.word	0x025B	#	[	start of loop
@@ -15,17 +13,36 @@ commands:
 # Your brainfuck subroutine will receive one argument:
 # a zero termianted string containing the code to execute.
 brainfuck:
-	pushq %rbp
-	movq %rsp, %rbp
+	pushq 	%rbp
+	movq 	%rsp, %rbp
 
-	movq %rdi, %rsi
-	movq $format_str, %rdi
-	call printf
-	movq $0, %rax
+	call	get_code_length
+	movq	%rax, %rcx
+	
+	shlq	$3, %rax
+	incq	%rax
+	shrq	$3, %rax
 
+	subq	$rax, %rsp
+	movq	%rsp, %rsi
 
+	pushq	%rsi
+	pushq	%rcx
+	call	translate_code
+	popq	%rcx			#	code length
+	popq	%rdi			#	Translated code
 
+	#	Reserve array space (30.000 bytes)
+	movq	$30000, %rax
+	subq	%rax, %rsp
+	movq	%rsp, %rdi		#address of array space
 
-	movq %rbp, %rsp
-	popq %rbp
+	shrq	$3, %rax		
+	movq	%rax, %rsi		#amount of quad-words to clear
+	call	clear_stack_space
+
+	call	run_code
+
+	movq 	%rbp, %rsp
+	popq 	%rbp
 	ret
