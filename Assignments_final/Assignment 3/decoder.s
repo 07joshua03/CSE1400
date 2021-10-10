@@ -24,6 +24,7 @@ main:
 	movq	$MESSAGE, %rdi	# first parameter: address of the message
 	call	decode			# call decode
 
+	movq	%rbp, %rsp
 	popq	%rbp			# restore base pointer location 
 	movq	$0, %rdi		# load program exit code
 	call	exit			# exit the program
@@ -38,8 +39,7 @@ decode:
 	
 	pushq	%rdi
 	call	cycle			#Print the first char (and the correct amount of times)
-	popq	%rsi			#Pop the base address into %rsi
-	movq	%rsi, %rdi		#Copy the base address to the current char address
+	popq	%rdi			#Pop the base address into %rsi
 	call 	nextcycle
 
 	# epilogue
