@@ -364,3 +364,40 @@ write_bitmap_end:
     movq    %rbp, %rsp
     popq    %rbp
     ret
+
+#   Takes:
+#   %rdi <- the base address(lowest) of space to write lead in
+#   Returns:
+#   %rax -> the address post-lead
+writelead_trail:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    movq    $leadtrail, %rsi
+    call    write_data  
+
+    call    get_message_length
+    addq    %rdi, %rax
+
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#   Takes:
+#   %rdi <- the base address(lowest) of space to write lead in
+#   %rsi <- the base address(lowest) of message
+#   Returns:
+#   %rax -> the address post-message
+writemessage:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    call    write_data  
+
+    call    get_message_length
+    addq    %rdi, %rax
+
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+    

@@ -13,6 +13,8 @@ test_output_2:  .asciz "\nThe message with lead-trail is:\n%s\n"
 test_output_3:  .asciz "\nThe RLE-encoded message is: (prob doesn't show correctly)\n%s\n"
 test_output_4:  .asciz "\nDecoding RLE-encoded message gives:(to show encoding/decoding works)\n%s\n\n"
 
+encrypt_done:   .asciz "\nThe barcode bitmap is saved at: %s\n\n"
+
 barcode_colors:
     .byte   0x57    #WHITE
     .byte   0xFF
@@ -25,9 +27,9 @@ barcode_colors:
     .byte   0x00
 
     .byte   0x52    #RED
-    .byte   0x00
-    .byte   0x00
-    .byte   0xFF
+    .byte   0x00    #B
+    .byte   0x00    #G
+    .byte   0xFF    #R
 
 .global main
 
@@ -36,7 +38,8 @@ main:
     movq    %rsp, %rbp
 
     movq    $message, %rdi
-    call    start
+    
+    call    encode
 
     movq    %rbp, %rsp
     popq    %rbp
@@ -45,9 +48,7 @@ main:
 
 #Takes:
 #   %rdi <- the address of message
-
-
-start:
+encode:
     pushq   %rbp
     movq    %rsp, %rbp
 
@@ -98,16 +99,16 @@ start:
 
     movq    %rdx, %rdi
 
-    #################################
-    pushq   %rdi
-    subq    $8, %rsp
-    movq    $0, %rax
-    movq    %rdi, %rsi
-    movq    $test_output_2, %rdi
-    call    printf
-    addq    $8, %rsp
-    popq    %rdi
-    #################################
+    // #################################
+    // pushq   %rdi
+    // subq    $8, %rsp
+    // movq    $0, %rax
+    // movq    %rdi, %rsi
+    // movq    $test_output_2, %rdi
+    // call    printf
+    // addq    $8, %rsp
+    // popq    %rdi
+    // #################################
 
     pushq   %rdi
 
@@ -129,15 +130,15 @@ start:
     popq    %rsi
     popq    %rdi
 
-    #################################
-    pushq   %rdi
-    pushq   %rsi
-    movq    $0, %rax
-    movq    $test_output_3, %rdi
-    call    printf
-    popq    %rsi
-    popq    %rdi
-    #################################
+    // #################################
+    // pushq   %rdi
+    // pushq   %rsi
+    // movq    $0, %rax
+    // movq    $test_output_3, %rdi
+    // call    printf
+    // popq    %rsi
+    // popq    %rdi
+    // #################################
 
     // pushq   %rsi
 
@@ -245,46 +246,27 @@ start:
 
     syscall
 
+    movq    $0, %rax
+    movq    $encrypt_done, %rdi
+    movq    $filepath, %rsi
+    call    printf
+
+
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#Takes:
+#   %rdi <- the address of the bitmap
+decode:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
     
-    #call    write_to_file
+
 
     movq    %rbp, %rsp
     popq    %rbp
     ret
 
-#   Takes:
-#   %rdi <- the base address(lowest) of space to write lead in
-#   Returns:
-#   %rax -> the address post-lead
-writelead_trail:
-    pushq   %rbp
-    movq    %rsp, %rbp
-
-    movq    $leadtrail, %rsi
-    call    write_data  
-
-    call    get_message_length
-    addq    %rdi, %rax
-
-    movq    %rbp, %rsp
-    popq    %rbp
-    ret
-
-#   Takes:
-#   %rdi <- the base address(lowest) of space to write lead in
-#   %rsi <- the base address(lowest) of message
-#   Returns:
-#   %rax -> the address post-message
-writemessage:
-    pushq   %rbp
-    movq    %rsp, %rbp
-
-    call    write_data  
-
-    call    get_message_length
-    addq    %rdi, %rax
-
-    movq    %rbp, %rsp
-    popq    %rbp
-    ret
 

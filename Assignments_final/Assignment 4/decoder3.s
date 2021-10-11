@@ -6,7 +6,7 @@ bgfgchar:	.asciz "\33[38;5;%ldm\33[48;5;%ldm%c"
 specialchar:    .asciz "\33[%ldm"
 
 specialchars:
-    .byte   0x00    #normal
+    .byte   0x00    #normal (special case)
     .byte   0x25    #stop blinknig
     .byte   0x2A    #bold
     .byte   0x42    #faint
@@ -213,4 +213,3 @@ getspecialansi:
 getspecialansiend:
     movzb    (%rbx), %rsi
     ret
-
