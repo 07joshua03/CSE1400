@@ -401,3 +401,27 @@ writemessage:
     popq    %rbp
     ret
     
+#   Takes:
+#   %rdi <- the base address of bitmap
+#   Returns:
+#   %rax -> 0 if valid bitmap file, otherwise 1
+bitmap_check:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    movq    $signature, %rsi
+    movw    (%rsi), %ax
+    movw    (%rdi), %dx
+    cmpw    %ax, %dx
+    je      bitmap_check_correct
+    movq    $1, %rax
+    jmp     bitmap_check_end
+
+bitmap_check_correct:
+    movq    $0, %rax
+    jmp     bitmap_check_end
+
+bitmap_check_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret

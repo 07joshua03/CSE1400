@@ -6,12 +6,16 @@ message:    .asciz "The answer for exam question 42 is not F."
 leadtrail:  .asciz "CCCCCCCCSSSSEE1111444400000000"
 barcode:    .asciz "WWWWWWWWBBBBBBBBWWWWBBBBWWBBBWWR"
 
-filepath:   .asciz "/home/student/TUDelft/Assembly/Assignment\ 6/barcode.bmp"
+#filepath:   .asciz "/home/student/TUDelft/Assembly/assignments/assignment_6/final/barcode.bmp"
+filepath:   .asciz "./barcode.bmp"
+
 
 test_output_1:  .asciz "\nThe original message is:\n%s\n"
 test_output_2:  .asciz "\nThe message with lead-trail is:\n%s\n"
 test_output_3:  .asciz "\nThe RLE-encoded message is: (prob doesn't show correctly)\n%s\n"
 test_output_4:  .asciz "\nDecoding RLE-encoded message gives:(to show encoding/decoding works)\n%s\n\n"
+
+decode_error:   .asciz "\nA non-bitmap file given. Exiting..."
 
 encrypt_done:   .asciz "\nThe barcode bitmap is saved at: %s\n\n"
 
@@ -38,8 +42,10 @@ main:
     movq    %rsp, %rbp
 
     movq    $message, %rdi
-    
     call    encode
+
+    movq    $filepath, %rdi
+    call    decode
 
     movq    %rbp, %rsp
     popq    %rbp
@@ -262,6 +268,19 @@ decode:
     pushq   %rbp
     movq    %rsp, %rbp
 
+    pushq   %rdi
+    call    bitmap_check
+    popq    %rdi
+
+    cmpq    $0, %rax
+    jne     not_bitmap_error
+
+    pushq   %rdi
+    #call    get_pixel_data_size
+    popq    %rdi
+    movq    %rax, %rsi
+
+    
     
 
 
@@ -269,4 +288,11 @@ decode:
     popq    %rbp
     ret
 
+not_bitmap_error:
+    movq    $decode_error, %rdi
+    movq    $0, %rax
+    call    printf
 
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
