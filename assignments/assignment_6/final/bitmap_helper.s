@@ -425,3 +425,174 @@ bitmap_check_end:
     movq    %rbp, %rsp
     popq    %rbp
     ret
+
+#   Takes:
+#   %rdi <- the base address of bitmap
+#   Returns:
+#   %rax -> bitmap width
+get_bitmap_width:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    movq    $0, %rax
+    movl    18(%rdi), %eax
+
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#   Takes:
+#   %rdi <- the base address of bitmap
+#   %rsi <- bitmap width
+#   Returns:
+#   %rax -> pixel data size
+get_last_row_address:
+    pushq   %rbp
+    movq    %rsp, %rbp
+
+    movq    %rsi, %rax
+    mulq    %rsi
+    subq    %rsi, %rax
+    movq    $3, %rdx
+    mulq    %rdx
+    addq    $54, %rax
+    addq    %rdi, %rax
+
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#   Takes:
+#   %rdi <-  address of last row
+#   %rsi <-  address to write barcode to
+#   %rdx <-  width of bitmap(in pixels)
+#
+#   Returns:
+#   Nothing, but writes the barcode(without message) into %rsi 
+write_decrypt_barcode:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    movq    %rcx, %rdx
+    movq    $3, %rax
+    mulq    %rdx
+    shrq    $2, %rax
+    movq    %rax, %rdx
+    
+write_decrypt_barcode_outer_loop:
+    cmpq    $0, %rcx
+    jle     write_decrypt_barcode_end
+    
+    pushq   %rdi
+    pushq   %rdx
+    jmp     write_decrypt_barcode_inner_loop
+
+write_decrypt_barcode_inner_loop:
+    cmpq    $0, %rdx
+    jle     write_decrypt_barcode_outer_loop_end
+
+    movl    (%rdi), %eax
+    movl    %eax, (%rsi)
+    addq    $4, %rdi
+    addq    $4, %rsi     
+
+    decq    %rdx
+    jmp     write_decrypt_barcode_inner_loop
+
+
+write_decrypt_barcode_outer_loop_end:
+    popq    %rdx
+    popq    %rdi
+
+    decq    %rcx
+    jmp     write_decrypt_barcode_outer_loop
+
+
+write_decrypt_barcode_end:
+    popq    %rax
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#   Takes:
+#   %rdi <- Starting address of pixel data (including message)
+#   %rsi <- Base address of only barcode(only pixel data)
+#   %rdx <- Barcode width/length(in pixels)
+XOR_decrypt:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    movq    $3, %rax
+    movq    %rdx, %rcx
+    mulq    %rcx
+    mulq    %rcx
+    shrq    $2, %rax
+    movq    %rax, %rcx
+
+
+XOR_decrypt_loop:
+    cmpq    $0, %rcx
+    jle     XOR_decrypt_end
+
+    movl    (%rdi), %eax
+    xorl    %eax, (%rsi)
+
+    addq    $4, %rdi
+    addq    $4, %rsi
+
+    decq    %rcx
+    jmp     XOR_decrypt_loop
+
+XOR_decrypt_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#   Takes:
+#   %rdi <- the base address of RLE-encoded message
+#   Returns:
+#   %rax -> the length(in bytes) of message(RLE-decoded)
+get_RLE_length:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    movq    $0, %rcx
+    movq    $0, %rax
+    movq    $0, %rdx
+
+get_RLE_length_loop:
+    movb    (%rcx, %rdi), %dl
+    cmpb    $0, %dl
+    je      get_RLE_length_end
+    addq    %rdx, %rax
+
+    addq    $2, %rcx
+    jmp     get_RLE_length_loop
+
+get_RLE_length_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret
+
+#   Takes:
+#   %rdi <- The base address of message (without lead)
+#   %rsi <- Base address of reserved space for fully-decrypted message
+#   %rdx <- The length of the fully-decrypted message
+remove_lead_trail:
+    pushq   %rbp
+    movq    %rsp, %rbp
+    movq    %rdx, %rcx
+    movq    $0, %rdx
+
+remove_lead_trail_loop:
+    cmpq    $0, %rcx
+    jle     remove_lead_trail_end
+
+    movb    (%rdx, %rdi), %al
+    movb    %al, (%rdx, %rsi)
+
+    incq    %rdx
+    decq    %rcx
+    jmp     remove_lead_trail_loop
+
+remove_lead_trail_end:
+    movq    %rbp, %rsp
+    popq    %rbp
+    ret

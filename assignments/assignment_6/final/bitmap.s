@@ -1,23 +1,27 @@
 .text
 
 .include "bitmap_helper.s"
+.include "read_file.s"
 
 message:    .asciz "The answer for exam question 42 is not F."
 leadtrail:  .asciz "CCCCCCCCSSSSEE1111444400000000"
-barcode:    .asciz "WWWWWWWWBBBBBBBBWWWWBBBBWWBBBWWR"
+barcode:    .asciz "WWWWWWWWBBBBBBBBWWWWBBBBWWBBBWWR"   #Always a multiple of 4
 
 #filepath:   .asciz "/home/student/TUDelft/Assembly/assignments/assignment_6/final/barcode.bmp"
 filepath:   .asciz "./barcode.bmp"
 
+encrypt_output_1:  .asciz "\nStarted encrypting...\n\nThe original message is: \n%s\n"
+encrypt_output_2:  .asciz "\nThe message with lead-trail is:\n%s\n"
+encrypt_output_3:  .asciz "\nThe RLE-encoded message is: (prob doesn't show correctly)\n%s\n"
+encrypt_output_4:  .asciz "\nDecoding RLE-encoded message gives:(to show encoding/decoding works)\n%s\n\n"
+encrypt_done:   .asciz "\nThe barcode bitmap is saved at: %s\n\nEncrypting done!\n\n"
 
-test_output_1:  .asciz "\nThe original message is:\n%s\n"
-test_output_2:  .asciz "\nThe message with lead-trail is:\n%s\n"
-test_output_3:  .asciz "\nThe RLE-encoded message is: (prob doesn't show correctly)\n%s\n"
-test_output_4:  .asciz "\nDecoding RLE-encoded message gives:(to show encoding/decoding works)\n%s\n\n"
+decrypt_output_1:   .asciz "\nStarted decrypting...\n\nThe file being decrypted is:%s\n\n"
+decrypt_output_2:   .asciz "\nThe decrypted message with lead/trail is: %s\n"
+decrypt_output_3:   .asciz "\nThe fully decrypted message is: %s\n\n"
+decode_error:   .asciz "\nA non-bitmap file given. Exiting...\n\n"
 
-decode_error:   .asciz "\nA non-bitmap file given. Exiting..."
 
-encrypt_done:   .asciz "\nThe barcode bitmap is saved at: %s\n\n"
 
 barcode_colors:
     .byte   0x57    #WHITE
@@ -63,7 +67,7 @@ encode:
     subq    $8, %rsp
     movq    $0, %rax
     movq    %rdi, %rsi
-    movq    $test_output_1, %rdi
+    movq    $encrypt_output_1, %rdi
     call    printf
     addq    $8, %rsp
     popq    %rdi
@@ -110,7 +114,7 @@ encode:
     // subq    $8, %rsp
     // movq    $0, %rax
     // movq    %rdi, %rsi
-    // movq    $test_output_2, %rdi
+    // movq    $encrypt_output_2, %rdi
     // call    printf
     // addq    $8, %rsp
     // popq    %rdi
@@ -140,7 +144,7 @@ encode:
     // pushq   %rdi
     // pushq   %rsi
     // movq    $0, %rax
-    // movq    $test_output_3, %rdi
+    // movq    $encrypt_output_3, %rdi
     // call    printf
     // popq    %rsi
     // popq    %rdi
@@ -171,7 +175,7 @@ encode:
     // pushq   %rdi
     // pushq   %rsi
     // movq    $0, %rax
-    // movq    $test_output_4, %rdi
+    // movq    $encrypt_output_4, %rdi
     // call    printf
     // popq    %rsi
     // popq    %rdi
@@ -263,10 +267,25 @@ encode:
     ret
 
 #Takes:
-#   %rdi <- the address of the bitmap
+#   %rdi <- the filepath of the bitmap
 decode:
     pushq   %rbp
     movq    %rsp, %rbp
+
+    ######################
+    pushq   %rdi
+    movq    %rdi, %rsi      
+    movq    $decrypt_output_1, %rdi
+    movq    $0, %rax
+    call    printf
+    popq    %rdi
+    #####################
+
+    subq    $8, %rsp
+    leaq    (%rsp), %rsi
+    call    read_file           #uses read_file from Assignment 7, written by TU Delft Staff
+    movq    %rax, %rdi
+    popq    %rsi
 
     pushq   %rdi
     call    bitmap_check
@@ -276,12 +295,134 @@ decode:
     jne     not_bitmap_error
 
     pushq   %rdi
-    #call    get_pixel_data_size
+    call    get_bitmap_width
     popq    %rdi
     movq    %rax, %rsi
 
+    pushq   %rdi
+    pushq   %rsi
+    call    get_last_row_address
+    popq    %rsi
+    popq    %rdi
+    movq    %rsi, %rcx
+    movq    %rax, %rsi
+
+    movq    $3, %rax
+    mulq    %rcx                #%rsi always a multiple of 4
+    mulq    %rcx 
+    subq    %rax, %rsp
+    movq    %rsp, %rdx        #address to barcode to
+
+    pushq   %rdi                #base address
+    pushq   %rdx                #address to write barcode to
+    pushq   %rcx                #width of bitmap(in pixels)
+
+    movq    %rsi, %rdi          #address of last row
+    movq    %rdx, %rsi          #address to write barcode to
+    movq    %rcx, %rdx          #width of bitmap(in pixels)
+    call    write_decrypt_barcode
+
+    popq    %rdx                #width of bitmap(in pixels)
+    popq    %rsi                #address to write barcode to
+    popq    %rdi                #base address
+
+    addq    $54, %rdi
+
+    // pushq   %rdi                #starting address of pixel data
+    pushq   %rsi                #address where only barcode is in(only pixel data)
+    pushq   %rdx                #barcode width/length(in pixels)
+    call    XOR_decrypt
+    popq    %rsi
+    popq    %rdi
+    // popq    %rdi
+
+    //pushq   %rdi
+    pushq   %rdi
+    call    get_RLE_length
+    popq    %rdi
+    //popq    %rdi
+
+    shrq    $3, %rax
+    incq    %rax
+    shlq    $3, %rax
+
+    subq    %rax, %rsp
+    movq    %rsp, %rsi
+
+    pushq   %rdi
+    pushq   %rsi
+    movq    %rsi, %rdi
+    movq    %rax, %rsi
+    call    clearstackspace
+    popq    %rsi
+    popq    %rdi
+
+    //pushq   %rdi            #Base address of RLE-encoded message
+    pushq   %rsi            #Reserved space for RLE-decoded message
+    call    decode_RLE
+    popq    %rsi
+    //popq    %rdi
+
+    movq    %rsi, %rdi
+
+    // ######################
+    // pushq   %rdi
+    // movq    %rdi, %rsi      
+    // movq    $decrypt_output_2, %rdi
+    // movq    $0, %rax
+    // call    printf
+    // popq    %rdi
+    // #####################
+
     
-    
+    pushq   %rdi
+    call    get_message_length
+    popq    %rdi
+    movq    %rax, %rsi
+
+    pushq   %rdi
+    pushq   %rsi
+    movq    $leadtrail, %rdi
+    call    get_message_length
+    popq    %rsi
+    popq    %rdi
+
+    addq    %rax, %rdi      #add lead length to base message address to offset it
+    shlq    $1, %rax        
+    subq    %rax, %rsi
+
+    shrq    $3, %rax
+    incq    %rax
+    shlq    $3, %rax
+    subq    %rax, %rsp
+    movq    %rsi, %rdx
+    movq    %rsp, %rsi
+
+    pushq   %rdi
+    pushq   %rsi
+    pushq   %rdx
+    movq    %rsi, %rdi
+    movq    %rax, %rsi
+    call    clearstackspace
+    popq    %rdx
+    popq    %rsi
+    popq    %rdi
+
+    //pushq   %rdi            #Base address of message(no lead/trail)
+    pushq   %rsi            #Reserved space for fully-decrypted message
+    //pushq   %rdx            #Length of message
+    call    remove_lead_trail
+    popq    %rdi
+
+
+    ######################
+    pushq   %rdi
+    movq    %rdi, %rsi      
+    movq    $decrypt_output_3, %rdi
+    movq    $0, %rax
+    call    printf
+    popq    %rdi
+    #####################
 
 
     movq    %rbp, %rsp
