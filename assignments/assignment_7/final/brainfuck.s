@@ -2,16 +2,6 @@
 
 .include "brainfuck_helper.s"
 
-commands:
-	.word	0x015D	#	]	end of loop
-	.word	0x025B	#	[	start of loop
-	.word	0x033E	#	>	move pointer right
-	.word	0x043C	#	<	move pointer left
-	.word	0x052E	#	.	print current pointer
-	.word	0x062D	#	-	dec current pointer
-	.word	0x072C	#	,	get input -> curr pointer
-	.word	0x082B	#	+	inc	current pointer
-
 # Your brainfuck subroutine will receive one argument:
 # a zero termianted string containing the code to execute.
 brainfuck:
@@ -23,42 +13,51 @@ brainfuck:
 	popq	%rdi
 	movq	%rax, %rcx
 	
-	shlq	$3, %rax
+	shrq	$1, %rax
 	incq	%rax
-	shrq	$3, %rax
+	shlq	$3, %rax
 
 	subq	%rax, %rsp
 	movq	%rsp, %rsi		#	space for translation
 
 	pushq	%rsi
-	movq	$commands, %rdx
 	call	translate_code
 	popq	%rdi			#	Translated code
 
-	#	Reserve array space (30.000 bytes)
-	movq	$30000, %rax
+	pushq	%rdi
+
+	movq    $0, %rcx        #line of code
+    movq    $0, %rdx        #sol counter
+	movq    $0, %r8         #curr sol
+	movq	$0, %r9			#curr sol line of code
+
+	call	sol_data
+
+	popq	%rdi
+	
+
+	#	Reserve array space (30.000 bytes) + print buffer(256 bytes)
+	movq	$30512, %rax
 	subq	%rax, %rsp
 	
-	pushq	%rdi
-	pushq	%rsp
+	leaq	512(%rsp), %rsi		#	address of array space
+	movq	%rsp, %rdx			#	print buffer
 
-	movq	%rsp, %rdi		#	address of array space
+	pushq	%rdi				#	code
+	pushq	%rsi				#	address of array space
+	pushq	%rdx				#	print buffer
+
+	movq	%rdx, %rdi
+	
 	shrq	$3, %rax		
 	movq	%rax, %rsi		#	amount of quad-words to clear
 	call	clear_stack_space
 
+	popq	%rdx		
 	popq	%rsi			
 	popq	%rdi			
 
-
-	pushq	%rdi
-	pushq	%rsi
-	call	get_code_length
-	movq	%rax, %rdx		#	Code length
-
-	popq	%rsi			#	starting address of array
-	popq	%rdi			#	starting address of code
-
+	subq	$16, %rsp		#just some reserve space for all the reasons
 
 	call	run_code
 
@@ -68,63 +67,161 @@ brainfuck:
 
 #	%rdi <- starting address of code
 #	%rsi <- starting address of array
+#	%rdx <- starting address of print buffer
 #	%rcx <- current line of code
-#	%rdx <- last line of code (n = 0 ... n = %rdx)
-#	%r8  <- current pointer location
-#
-#
+#	%r8  <- current pointer location	
+#	%r9  <- print buffer size
+#	$r10 <- sol counter
 run_code:
 	pushq	%rbp
 	movq	%rsp, %rbp
 
 	movq	$0, %rcx
 	movq	$0, %r8
+	movq	$0, %r9
+	movq	$0, %r10
 
 run_code_loop:
-	cmpq	%rdx, %rcx
+	
+	movb	(%rcx, %rdi), %al
+	cmpb	$0, %al
 	je		run_code_end
 
-	movb	(%rcx, %rdi), %al
+	
 	cmpb	$1, %al
-	je		_1
+	je		command_output
 	cmpb	$2, %al
-	je		_2
+	je		command_input
 	cmpb	$3, %al
-	je		_3
+	je		command_pointerinc
 	cmpb	$4, %al
-	je		_4
+	je		command_pointerdec
 	cmpb	$5, %al
-	je		_5
+	je		command_valueinc
 	cmpb	$6, %al
-	je		_6
+	je		command_valuedec
 	cmpb	$7, %al
-	je		_7
+	je		command_sol
 	cmpb	$8, %al
-	je		_8
-	jne		_error
+	je		command_eol
+	cmpb	$9, %al
+	je		command_valuezero
 
+	jmp		command_error	
 
 run_code_end:
+	cmpq	$0, %r9
+	jne		print
 	movq	%rbp, %rsp
 	popq	%rbp
 	ret
 
-_1:
 
-_2:
+command_output:
+	movb	(%r8, %rsi), %al
+	movb	%al, (%r9, %rdx)
+	incq	%r9
 
-_3:
+	addq	$3, %rcx
 
-_4:
+	cmpq	$511, %r9
+	jge		print
 
-_5:
+	jmp 	run_code_loop
+command_input:
+	addq	$3, %rcx
+	jmp 	run_code_loop
+command_pointerinc:
+	incq	%rcx
+	movzb	(%rcx, %rdi), %rax
+	
+	addq	%rax, %r8
+	addq	$2, %rcx
+	jmp		run_code_loop
 
-_6:
+command_pointerdec:
+	incq	%rcx
+	movzb	(%rcx, %rdi), %rax
 
-_7:
+	subq	%rax, %r8
+	addq	$2, %rcx
+	jmp		run_code_loop
+command_valueinc:
+	incq	%rcx
+	movzb	(%rcx, %rdi), %rax
 
-_8:
+	addq	%rax, (%r8, %rsi)
+	addq	$2, %rcx
+	jmp		run_code_loop
 
-_error:
-	movq	$-1, %rdi
-	call	exit
+command_valuedec:
+	incq	%rcx
+	movzb	(%rcx, %rdi), %rax
+
+	subq	%rax, (%r8, %rsi)
+	addq	$2, %rcx
+	jmp		run_code_loop
+
+command_sol:
+	cmpb	$0, (%r8, %rsi)
+	je		command_sol_no
+	addq	$3, %rcx
+	pushq	%rcx		#command following sol
+	jmp		run_code_loop
+	
+command_sol_no:
+	movw	1(%rcx, %rdi), %cx
+	
+	jmp		run_code_loop	
+
+command_eol:
+	cmpb	$0, (%r8, %rsi)
+	je		command_eol_no
+	popq	%rcx
+
+	pushq	%rcx
+	jmp		run_code_loop
+
+command_eol_no:
+	addq	$8, %rsp
+	addq	$3, %rcx
+	jmp		run_code_loop
+
+
+command_valuezero:
+	movb	$0, (%r8, %rsi)
+	addq	$3, %rcx
+	jmp		run_code_loop
+
+
+command_error:
+	addq	$3, %rcx
+	#call	exit
+	jmp		run_code_loop
+
+print:
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%rdx
+	pushq	%rcx
+	pushq	%r8
+	pushq	%r10
+	pushq	%r11
+	movq	$1, %rax
+	movq	$1, %rdi
+	movq	%rdx, %rsi
+	movq	%r9, %rdx
+
+	syscall
+
+	popq	%r11
+	popq	%r10
+	popq	%r8
+	popq	%rcx
+	popq	%rdx
+	popq	%rsi
+	popq	%rdi
+
+	movq	$0, %r9
+	
+	jmp		run_code_loop

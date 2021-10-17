@@ -10,15 +10,15 @@ barcode:    .asciz "WWWWWWWWBBBBBBBBWWWWBBBBWWBBBWWR"   #Always a multiple of 4
 #filepath:   .asciz "/home/student/TUDelft/Assembly/assignments/assignment_6/final/barcode.bmp"
 filepath:   .asciz "./barcode.bmp"
 
-encrypt_output_1:  .asciz "\nStarted encrypting...\n\nThe original message is: \n%s\n"
+encrypt_output_1:  .asciz "\n#############################\n\nStarted encrypting...\n\nThe original message is: \n%s\n"
 encrypt_output_2:  .asciz "\nThe message with lead-trail is:\n%s\n"
 encrypt_output_3:  .asciz "\nThe RLE-encoded message is: (prob doesn't show correctly)\n%s\n"
 encrypt_output_4:  .asciz "\nDecoding RLE-encoded message gives:(to show encoding/decoding works)\n%s\n\n"
 encrypt_done:   .asciz "\nThe barcode bitmap is saved at: %s\n\nEncrypting done!\n\n"
 
-decrypt_output_1:   .asciz "\nStarted decrypting...\n\nThe file being decrypted is:%s\n\n"
+decrypt_output_1:   .asciz "#############################\n\nStarted decrypting...\n\nThe file being decrypted is: %s\n"
 decrypt_output_2:   .asciz "\nThe decrypted message with lead/trail is: %s\n"
-decrypt_output_3:   .asciz "\nThe fully decrypted message is: %s\n\n"
+decrypt_output_3:   .asciz "\nThe fully decrypted message is:\n%s\n\nDecrypting done!\n\n#############################\n\n"
 decode_error:   .asciz "\nA non-bitmap file given. Exiting...\n\n"
 
 
@@ -38,6 +38,16 @@ barcode_colors:
     .byte   0x00    #B
     .byte   0x00    #G
     .byte   0xFF    #R
+
+    .byte   0x47    #GREEN
+    .byte   0x00    #B
+    .byte   0xFF    #G
+    .byte   0x00    #R
+
+    .byte   0x62    #BLUE
+    .byte   0xFF    #B
+    .byte   0x00    #G
+    .byte   0x00    #R
 
 .global main
 
@@ -437,3 +447,4 @@ not_bitmap_error:
     movq    %rbp, %rsp
     popq    %rbp
     ret
+
